@@ -1,10 +1,10 @@
 <template>
 	<!--文章目录-->
-	<div class="ui segments m-toc toc-wrapper m-box">
-		<div class="ui secondary segment">
+	<div class="ui segments m-toc toc-wrapper m-box toc-container">
+		<div class="ui secondary segment toc-header">
 			<i class="list ul icon"></i>本文目录
 		</div>
-		<div class="ui yellow segment">
+		<div class="ui yellow segment toc-content">
 			<div class="js-toc"></div>
 		</div>
 	</div>
@@ -60,6 +60,36 @@
 </script>
 
 <style>
+	.toc-container {
+		border-radius: 12px !important;
+		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+		overflow: hidden;
+		transition: all 0.3s ease;
+		background: white !important;
+		border: 1px solid rgba(0, 0, 0, 0.08) !important;
+	}
+
+	.toc-header {
+		padding: 12px 15px !important;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+		color: white !important;
+		font-size: 15px;
+		font-weight: 600;
+		border: none !important;
+		margin: 0 !important;
+	}
+
+	.toc-header .icon {
+		margin-right: 6px;
+		color: white !important;
+	}
+
+	.toc-content {
+		padding: 15px !important;
+		background: white !important;
+		margin: 0 !important;
+	}
+
 	.m-toc {
 		z-index: 10 !important;
 	}
@@ -85,12 +115,15 @@
 
 	.m-toc .toc-list li a {
 		display: block;
-		padding: 4px 0;
-		font-weight: 300;
+		padding: 6px 0;
+		font-weight: 400;
+		color: #666;
+		transition: all 0.2s ease;
 	}
 
 	.m-toc .toc-list li a:hover {
-		color: #fbbd08;
+		color: #667eea;
+		transform: translateX(3px);
 	}
 
 	.m-toc a.toc-link {
@@ -114,22 +147,24 @@
 	}
 
 	.m-toc .is-active-link {
-		font-weight: 700;
-		color: #fbbd08 !important;
+		font-weight: 600;
+		color: #667eea !important;
 	}
 
 	.m-toc .toc-link::before {
-		background-color: #EEE;
+		background-color: #e0e0e0;
 		content: ' ';
 		display: inline-block;
 		height: 0;
 		left: 0;
 		margin-top: -1px;
 		position: absolute;
-		width: 2px
+		width: 2px;
+		transition: all 0.2s ease;
 	}
 
 	.m-toc .is-active-link::before {
-		background-color: #54BC4B
+		background-color: #667eea;
+		height: 100%;
 	}
 </style>

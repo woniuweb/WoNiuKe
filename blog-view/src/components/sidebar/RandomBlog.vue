@@ -1,7 +1,9 @@
 <template>
 	<!--随机文章-->
-	<div class="ui segments m-box">
-		<div class="ui secondary segment"><i class="bookmark icon"></i>随机文章</div>
+	<div class="ui segments m-box random-container">
+		<div class="ui secondary segment random-header">
+			<i class="bookmark icon"></i>随机文章
+		</div>
 		<div class="ui yellow segment">
 			<div class="ui divided items">
 				<div class="m-item" v-for="blog in randomBlogList" :key="blog.id" @click.prevent="toBlog(blog)">
@@ -34,8 +36,34 @@
 </script>
 
 <style scoped>
-	.secondary.segment {
-		padding: 10px;
+	.random-container {
+		border-radius: 12px !important;
+		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+		overflow: hidden;
+		transition: all 0.3s ease;
+	}
+
+	.random-container:hover {
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
+	}
+
+	.random-header {
+		padding: 12px 15px !important;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+		color: white !important;
+		font-size: 15px;
+		font-weight: 600;
+		border: none !important;
+	}
+
+	.random-header .icon {
+		margin-right: 6px;
+	}
+
+	.ui.yellow.segment {
+		padding: 15px !important;
+		background: white !important;
+		margin: 0 !important;
 	}
 
 	.ui.divided.items .m-item:first-child {
@@ -43,13 +71,20 @@
 	}
 
 	.ui.divided.items .m-item {
-		margin-top: 1rem;
-		height: 7rem;
+		margin-top: 12px;
+		height: 100px;
 		position: relative;
 		overflow: hidden;
-		border-radius: 5px;
+		border-radius: 8px;
 		cursor: pointer;
 		user-select: none;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
+
+	.ui.divided.items .m-item:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 	}
 
 	.ui.divided.items .m-item .img {
@@ -59,21 +94,31 @@
 		right: 0;
 		bottom: 0;
 		object-fit: cover;
-		background-position-x: center;
-		background-position-y: center;
+		background-position: center;
 		background-size: cover;
+		transition: transform 0.5s ease;
+	}
+
+	.ui.divided.items .m-item:hover .img {
+		transform: scale(1.1);
 	}
 
 	.ui.divided.items .m-item .info {
 		z-index: 1;
-		background: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.8));
+		background: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75));
 		position: absolute;
 		left: 0;
 		right: 0;
 		bottom: 0;
-		padding: .5rem !important;
+		padding: 10px 12px !important;
 		font-size: 12px;
 		color: white;
+	}
+
+	.ui.divided.items .m-item .info .date {
+		font-size: 11px;
+		opacity: 0.9;
+		margin-bottom: 4px;
 	}
 
 	.ui.divided.items .m-item .info .title {
@@ -81,7 +126,9 @@
 		text-overflow: ellipsis;
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
-		-webkit-line-clamp: 1;
+		-webkit-line-clamp: 2;
 		word-break: break-word;
+		line-height: 1.4;
+		font-weight: 500;
 	}
 </style>

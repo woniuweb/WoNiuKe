@@ -149,20 +149,46 @@
 	}
 
 	.ui.fixed.menu {
-		transition: .3s ease-out;
+		transition: all 0.3s ease;
+		backdrop-filter: blur(10px);
+		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+	}
+
+	.ui.fixed.menu .item {
+		font-weight: 500;
+		transition: all 0.3s ease;
+		border-radius: 8px;
+		margin: 0 4px;
+	}
+
+	.ui.fixed.menu .item:hover {
+		background: rgba(255, 255, 255, 0.15) !important;
+		transform: translateY(-2px);
+	}
+
+	.ui.fixed.menu .header.item {
+		font-size: 1.3em !important;
+		font-weight: 700 !important;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
 	}
 
 	.ui.inverted.pointing.menu.transparent {
-		background: transparent !important;
+		background: rgba(27, 28, 29, 0.8) !important;
+		backdrop-filter: blur(10px);
 	}
 
 	.ui.inverted.pointing.menu.transparent .active.item:after {
-		background: transparent !important;
+		background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
 		transition: .3s ease-out;
+		height: 3px;
+		border-radius: 3px 3px 0 0;
 	}
 
 	.ui.inverted.pointing.menu.transparent .active.item:hover:after {
-		background: transparent !important;
+		background: linear-gradient(90deg, #667eea 0%, #764ba2 100%) !important;
 	}
 
 	.el-dropdown-link {
@@ -174,18 +200,25 @@
 
 	.el-dropdown-menu {
 		margin: 7px 0 0 0 !important;
-		padding: 0 !important;
+		padding: 8px !important;
 		border: 0 !important;
-		background: #1b1c1d !important;
+		background: rgba(27, 28, 29, 0.95) !important;
+		backdrop-filter: blur(10px);
+		border-radius: 12px !important;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
 	}
 
 	.el-dropdown-menu__item {
-		padding: 0 15px !important;
+		padding: 10px 20px !important;
 		color: rgba(255, 255, 255, .9) !important;
+		border-radius: 8px !important;
+		margin: 2px 0 !important;
+		transition: all 0.3s ease !important;
 	}
 
 	.el-dropdown-menu__item:hover {
-		background: rgba(255, 255, 255, .08) !important;
+		background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%) !important;
+		transform: translateX(5px);
 	}
 
 	.el-popper .popper__arrow::after {
@@ -202,10 +235,18 @@
 	}
 
 	.m-search input {
-		color: rgba(255, 255, 255, .9);;
-		border: 0px !important;
-		background-color: inherit;
+		color: rgba(255, 255, 255, .9);
+		border: 1px solid rgba(255, 255, 255, 0.2) !important;
+		background-color: rgba(255, 255, 255, 0.1) !important;
 		padding: .67857143em 2.1em .67857143em 1em;
+		border-radius: 20px !important;
+		transition: all 0.3s ease;
+	}
+
+	.m-search input:focus {
+		background-color: rgba(255, 255, 255, 0.15) !important;
+		border-color: rgba(102, 126, 234, 0.5) !important;
+		box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 	}
 
 	.m-search i {

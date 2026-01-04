@@ -1,18 +1,22 @@
 <template>
 	<div>
-		<div class="ui padded attached segment m-padded-tb-large">
-			<div class="ui large red right corner label" v-if="blog.top">
+		<div class="ui padded attached segment m-padded-tb-large blog-content-card">
+			<div class="ui large red right corner label top-badge" v-if="blog.top">
 				<i class="arrow alternate circle up icon"></i>
 			</div>
 			<div class="ui middle aligned mobile reversed stackable">
 				<div class="ui grid m-margin-lr">
+					<!--分类-->
+					<router-link :to="`/category/${blog.category.name}`" class="ui orange large ribbon label category-label" v-if="blog.category">
+						<i class="small folder open icon"></i><span class="m-text-500">{{ blog.category.name }}</span>
+					</router-link>
 					<!--标题-->
 					<div class="row m-padded-tb-small">
-						<h2 class="ui header m-center">{{ blog.title }}</h2>
+						<h2 class="ui header m-center blog-title">{{ blog.title }}</h2>
 					</div>
 					<!--文章简要信息-->
 					<div class="row m-padded-tb-small">
-						<div class="ui horizontal link list m-center">
+						<div class="ui horizontal link list m-center blog-meta">
 							<div class="item m-datetime">
 								<i class="small calendar icon"></i><span>{{ blog.createTime | dateFormat('YYYY-MM-DD') }}</span>
 							</div>
@@ -37,12 +41,8 @@
 							</a>
 						</div>
 					</div>
-					<!--分类-->
-					<router-link :to="`/category/${blog.category.name}`" class="ui orange large ribbon label" v-if="blog.category">
-						<i class="small folder open icon"></i><span class="m-text-500">{{ blog.category.name }}</span>
-					</router-link>
 					<!--文章Markdown正文-->
-					<div class="typo js-toc-content m-padded-tb-small match-braces rainbow-braces" v-lazy-container="{selector: 'img'}" v-viewer :class="{'m-big-fontsize':bigFontSize}" v-html="blog.content"></div>
+					<div class="typo js-toc-content m-padded-tb-small match-braces rainbow-braces blog-content" v-lazy-container="{selector: 'img'}" v-viewer :class="{'m-big-fontsize':bigFontSize}" v-html="blog.content"></div>
 					<!--赞赏-->
 					<div style="margin: 2em auto">
 						<el-popover placement="top" width="220" trigger="click" v-if="blog.appreciation">
@@ -61,7 +61,7 @@
 					<!--标签-->
 					<div class="row m-padded-tb-no">
 						<div class="column m-padding-left-no">
-							<router-link :to="`/tag/${tag.name}`" class="ui tag label m-text-500 m-margin-small" :class="tag.color" v-for="(tag,index) in blog.tags" :key="index">{{ tag.name }}</router-link>
+							<router-link :to="`/tag/${tag.name}`" class="ui tag label m-text-500 m-margin-small blog-tag" :class="getTagColor(tag.color, index)" v-for="(tag,index) in blog.tags" :key="index">{{ tag.name }}</router-link>
 						</div>
 					</div>
 				</div>
@@ -167,12 +167,80 @@
 			},
 			changeFocusMode() {
 				this.$store.commit(SET_FOCUS_MODE, !this.focusMode)
+			},
+			getTagColor(color, index) {
+				if (color) return color
+				const colors = ['red', 'orange', 'yellow', 'olive', 'green', 'teal', 'blue', 'violet', 'purple', 'pink']
+				return colors[index % colors.length]
 			}
 		}
 	}
 </script>
 
 <style scoped>
+	.blog-content-card {
+		border-radius: 12px !important;
+		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+		overflow: visible !important;
+		background: white !important;
+		border: 1px solid rgba(0, 0, 0, 0.08) !important;
+		position: relative;
+	}
+
+	.top-badge {
+		border-radius: 0 0 0 12px !important;
+	}
+
+	.category-label {
+		margin-top: 0 !important;
+		margin-left: -1em !important;
+		z-index: 10;
+		position: relative;
+	}
+
+	.blog-title {
+		color: #2c3e50 !important;
+		font-weight: 600 !important;
+		font-size: 1.8em !important;
+	}
+
+	.blog-meta {
+		background: rgba(102, 126, 234, 0.05);
+		padding: 10px 18px;
+		border-radius: 8px;
+		display: inline-flex !important;
+	}
+
+	.blog-meta .item {
+		color: #666 !important;
+		font-size: 13px;
+		padding: 0 10px !important;
+		border-right: 1px solid rgba(0, 0, 0, 0.08);
+	}
+
+	.blog-meta .item:last-child {
+		border-right: none;
+	}
+
+	.blog-meta .item i {
+		color: #667eea !important;
+	}
+
+	.blog-content {
+		padding: 20px 0 !important;
+		line-height: 1.8 !important;
+	}
+
+	.blog-tag {
+		transition: all 0.2s ease !important;
+		margin: 4px !important;
+	}
+
+	.blog-tag:hover {
+		opacity: 0.8;
+		transform: translateY(-1px);
+	}
+
 	.el-divider {
 		margin: 1rem 0 !important;
 	}
