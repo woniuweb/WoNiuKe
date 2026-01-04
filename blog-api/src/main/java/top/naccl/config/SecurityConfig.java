@@ -8,7 +8,8 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import top.naccl.util.HashUtils;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import top.naccl.service.LoginLogService;
 import top.naccl.service.impl.UserServiceImpl;
@@ -28,8 +29,18 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	MyAuthenticationEntryPoint myAuthenticationEntryPoint;
 
 	@Bean
-	public BCryptPasswordEncoder bCryptPasswordEncoder() {
-		return new BCryptPasswordEncoder();
+	public PasswordEncoder passwordEncoder() {
+		return new PasswordEncoder() {
+			@Override
+			public String encode(CharSequence rawPassword) {
+				return HashUtils.getBC(rawPassword);
+			}
+
+			@Override
+			public boolean matches(CharSequence rawPassword, String encodedPassword) {
+				return HashUtils.matchBC(rawPassword, encodedPassword);
+			}
+		};
 	}
 
 	@Override
