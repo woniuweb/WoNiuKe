@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import top.naccl.exception.NotFoundException;
 import top.naccl.exception.PersistenceException;
 import top.naccl.model.vo.Result;
@@ -58,6 +59,19 @@ public class ControllerExceptionHandler {
 	public Result usernameNotFoundExceptionHandler(HttpServletRequest request, UsernameNotFoundException e) {
 		logger.error("Request URL : {}, Exception :", request.getRequestURL(), e);
 		return Result.create(401, "用户名或密码错误！");
+	}
+
+	/**
+	 * 捕获上传大小超限异常
+	 *
+	 * @param request 请求
+	 * @param e       异常信息
+	 * @return
+	 */
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public Result maxUploadSizeExceededExceptionHandler(HttpServletRequest request, MaxUploadSizeExceededException e) {
+		logger.error("Request URL : {}, Exception :", request.getRequestURL(), e);
+		return Result.create(413, "上传文件过大");
 	}
 
 	/**

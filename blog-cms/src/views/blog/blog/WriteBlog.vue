@@ -15,11 +15,11 @@
 			</el-row>
 
 			<el-form-item label="文章描述" prop="description">
-				<mavon-editor v-model="form.description"/>
+				<mavon-editor ref="mdDescription" v-model="form.description" @imgAdd="handleImgAddDescription"/>
 			</el-form-item>
 
 			<el-form-item label="文章正文" prop="content">
-				<mavon-editor v-model="form.content"/>
+				<mavon-editor ref="mdContent" v-model="form.content" @imgAdd="handleImgAddContent"/>
 			</el-form-item>
 
 			<el-row :gutter="20">
@@ -105,6 +105,7 @@
 <script>
 	import Breadcrumb from "@/components/Breadcrumb";
 	import {getCategoryAndTag, saveBlog, getBlogById, updateBlog} from '@/api/blog'
+	import {uploadImage} from '@/api/upload'
 
 	export default {
 		name: "WriteBlog",
@@ -153,6 +154,27 @@
 			}
 		},
 		methods: {
+			async uploadMavonImage(editorRef, pos, file) {
+				try {
+					const res = await uploadImage(file)
+					const url = res.data && (res.data.url || res.data)
+					if (!url) {
+						return this.msgError('图片上传失败：未返回图片地址')
+					}
+					const editor = this.$refs[editorRef]
+					if (editor && editor.$img2Url) {
+						editor.$img2Url(pos, url)
+					}
+				} catch (e) {
+					this.msgError(e && e.message ? e.message : '图片上传失败')
+				}
+			},
+			handleImgAddDescription(pos, file) {
+				return this.uploadMavonImage('mdDescription', pos, file)
+			},
+			handleImgAddContent(pos, file) {
+				return this.uploadMavonImage('mdContent', pos, file)
+			},
 			getData() {
 				getCategoryAndTag().then(res => {
 					this.categoryList = res.data.categories

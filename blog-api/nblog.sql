@@ -364,4 +364,23 @@ CREATE TABLE `visitor`  (
   UNIQUE KEY `idx_uuid` (`uuid`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
 
+-- ----------------------------
+-- Table structure for upload_file
+-- ----------------------------
+DROP TABLE IF EXISTS `upload_file`;
+CREATE TABLE `upload_file`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT COMMENT '文件ID',
+  `storage_mode` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '存储方式：local/github/upyun 等，对应 upload.channel',
+  `file_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '文件类型：png/jpg/jpeg/webp... 或 mime 子类型',
+  `original_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '原始文件名（用户上传时的文件名）',
+  `file_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '服务器侧保存的文件名（通常是UUID.xxx）',
+  `file_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '文件路径（可存相对路径/目录前缀/或本地绝对路径，按你的约定）',
+  `url` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '对外可访问的URL（前端插入Markdown用）',
+  `file_size` bigint(0) NULL DEFAULT NULL COMMENT '文件大小（字节）',
+  `create_time` datetime(0) NOT NULL COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_create_time`(`create_time`) USING BTREE,
+  INDEX `idx_storage_mode`(`storage_mode`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic COMMENT = '上传文件记录表';
+
 SET FOREIGN_KEY_CHECKS = 1;
