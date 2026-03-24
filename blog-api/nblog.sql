@@ -254,6 +254,7 @@ INSERT INTO `site_setting` VALUES (7, 'reward', '赞赏码', '/img/reward.jpg', 
 INSERT INTO `site_setting` VALUES (8, 'commentAdminFlag', '博主评论标识', '咕咕', 1);
 INSERT INTO `site_setting` VALUES (9, 'playlistServer', '播放器平台', 'netease', 1);
 INSERT INTO `site_setting` VALUES (10, 'playlistId', '播放器歌单', '3071528549', 1);
+INSERT INTO `site_setting` VALUES (33, 'videoUrl', '首页视频', '', 1);
 INSERT INTO `site_setting` VALUES (11, 'avatar', '头像', '/img/avatar.jpg', 2);
 INSERT INTO `site_setting` VALUES (12, 'name', '昵称', 'Naccl', 2);
 INSERT INTO `site_setting` VALUES (13, 'rollText', '滚动个签', '\"云鹤当归天，天不迎我妙木仙；\",\"游龙当归海，海不迎我自来也。\"', 2);

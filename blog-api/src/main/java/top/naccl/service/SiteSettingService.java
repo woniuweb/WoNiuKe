@@ -13,5 +13,9 @@ public interface SiteSettingService {
 
 	String getWebTitleSuffix();
 
+	String getHomeVideoUrl();
+
+	void updateHomeVideoUrl(String videoUrl);
+
 	void updateSiteSetting(List<LinkedHashMap> siteSettings, List<Integer> deleteIds);
 }

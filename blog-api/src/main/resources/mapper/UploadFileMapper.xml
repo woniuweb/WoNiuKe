@@ -29,4 +29,14 @@
 		where id = #{id}
 	</select>
 
+	<select id="getListByFileTypes" resultMap="UploadFile">
+		select id, storage_mode, file_type, original_name, file_name, file_path, url, file_size, create_time
+		from upload_file
+		where file_type in
+		<foreach collection="list" item="fileType" open="(" separator="," close=")">
+			#{fileType}
+		</foreach>
+		order by create_time desc
+	</select>
+
 </mapper>

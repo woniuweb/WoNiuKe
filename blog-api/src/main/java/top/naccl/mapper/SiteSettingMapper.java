@@ -16,6 +16,8 @@ import java.util.List;
 public interface SiteSettingMapper {
 	List<SiteSetting> getList();
 
+	SiteSetting getSiteSettingByNameEn(String nameEn);
+
 	List<SiteSetting> getFriendInfo();
 
 	String getWebTitleSuffix();
@@ -25,6 +27,8 @@ public interface SiteSettingMapper {
 	int deleteSiteSettingById(Integer id);
 
 	int saveSiteSetting(SiteSetting siteSetting);
+
+	int updateSiteSettingValueByNameEn(SiteSetting siteSetting);
 
 	int updateFriendInfoContent(String content);
 

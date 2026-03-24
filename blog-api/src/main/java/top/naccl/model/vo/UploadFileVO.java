@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.util.Date;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -20,4 +22,5 @@ public class UploadFileVO {
 	private Long fileSize;
 	private String storageMode;
 	private String filePath;
+	private Date createTime;
 }

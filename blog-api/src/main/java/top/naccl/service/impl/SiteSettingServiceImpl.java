@@ -24,19 +24,15 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * @Description: 站点设置业务层实现
- * @Author: Naccl
- * @Date: 2020-08-09
- */
 @Service
 public class SiteSettingServiceImpl implements SiteSettingService {
-	@Autowired
-	SiteSettingMapper siteSettingMapper;
-	@Autowired
-	RedisService redisService;
-
 	private static final Pattern PATTERN = Pattern.compile("\"(.*?)\"");
+
+	@Autowired
+	private SiteSettingMapper siteSettingMapper;
+
+	@Autowired
+	private RedisService redisService;
 
 	@Override
 	public Map<String, List<SiteSetting>> getList() {
@@ -44,16 +40,16 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 		List<SiteSetting> type1 = new ArrayList<>();
 		List<SiteSetting> type2 = new ArrayList<>();
 		List<SiteSetting> type3 = new ArrayList<>();
-		for (SiteSetting s : siteSettings) {
-			switch (s.getType()) {
+		for (SiteSetting siteSetting : siteSettings) {
+			switch (siteSetting.getType()) {
 				case 1:
-					type1.add(s);
+					type1.add(siteSetting);
 					break;
 				case 2:
-					type2.add(s);
+					type2.add(siteSetting);
 					break;
 				case 3:
-					type3.add(s);
+					type3.add(siteSetting);
 					break;
 				default:
 					break;
@@ -73,70 +69,30 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 		if (siteInfoMapFromRedis != null) {
 			return siteInfoMapFromRedis;
 		}
+
 		List<SiteSetting> siteSettings = siteSettingMapper.getList();
-		Map<String, Object> siteInfo = new HashMap<>(2);
+		Map<String, Object> siteInfo = new HashMap<>(8);
 		List<Badge> badges = new ArrayList<>();
 		Introduction introduction = new Introduction();
 		List<Favorite> favorites = new ArrayList<>();
 		List<String> rollTexts = new ArrayList<>();
-		for (SiteSetting s : siteSettings) {
-			switch (s.getType()) {
+
+		for (SiteSetting siteSetting : siteSettings) {
+			switch (siteSetting.getType()) {
 				case 1:
-					if (SiteSettingConstants.COPYRIGHT.equals(s.getNameEn())) {
-						Copyright copyright = JacksonUtils.readValue(s.getValue(), Copyright.class);
-						siteInfo.put(s.getNameEn(), copyright);
-					} else {
-						siteInfo.put(s.getNameEn(), s.getValue());
-					}
+					handleType1SiteSetting(siteInfo, siteSetting);
 					break;
 				case 2:
-					switch (s.getNameEn()) {
-						case SiteSettingConstants.AVATAR:
-							introduction.setAvatar(s.getValue());
-							break;
-						case SiteSettingConstants.NAME:
-							introduction.setName(s.getValue());
-							break;
-						case SiteSettingConstants.GITHUB:
-							introduction.setGithub(s.getValue());
-							break;
-						case SiteSettingConstants.TELEGRAM:
-							introduction.setTelegram(s.getValue());
-							break;
-						case SiteSettingConstants.QQ:
-							introduction.setQq(s.getValue());
-							break;
-						case SiteSettingConstants.BILIBILI:
-							introduction.setBilibili(s.getValue());
-							break;
-						case SiteSettingConstants.NETEASE:
-							introduction.setNetease(s.getValue());
-							break;
-						case SiteSettingConstants.EMAIL:
-							introduction.setEmail(s.getValue());
-							break;
-						case SiteSettingConstants.FAVORITE:
-							Favorite favorite = JacksonUtils.readValue(s.getValue(), Favorite.class);
-							favorites.add(favorite);
-							break;
-						case SiteSettingConstants.ROLL_TEXT:
-							Matcher m = PATTERN.matcher(s.getValue());
-							while (m.find()) {
-								rollTexts.add(m.group(1));
-							}
-							break;
-						default:
-							break;
-					}
+					handleType2SiteSetting(introduction, favorites, rollTexts, siteSetting);
 					break;
 				case 3:
-					Badge badge = JacksonUtils.readValue(s.getValue(), Badge.class);
-					badges.add(badge);
+					badges.add(JacksonUtils.readValue(siteSetting.getValue(), Badge.class));
 					break;
 				default:
 					break;
 			}
 		}
+
 		introduction.setFavorites(favorites);
 		introduction.setRollText(rollTexts);
 		Map<String, Object> map = new HashMap<>(8);
@@ -152,21 +108,47 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 		return siteSettingMapper.getWebTitleSuffix();
 	}
 
+	@Override
+	public String getHomeVideoUrl() {
+		SiteSetting siteSetting = siteSettingMapper.getSiteSettingByNameEn(SiteSettingConstants.VIDEO_URL);
+		return siteSetting == null ? "" : normalizeVideoUrl(siteSetting.getValue());
+	}
+
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateSiteSetting(List<LinkedHashMap> siteSettings, List<Integer> deleteIds) {
 		for (Integer id : deleteIds) {
-			//删除
 			deleteOneSiteSettingById(id);
 		}
-		for (LinkedHashMap s : siteSettings) {
-			SiteSetting siteSetting = JacksonUtils.convertValue(s, SiteSetting.class);
+		for (LinkedHashMap siteSettingMap : siteSettings) {
+			SiteSetting siteSetting = JacksonUtils.convertValue(siteSettingMap, SiteSetting.class);
 			if (siteSetting.getId() != null) {
-				//修改
 				updateOneSiteSetting(siteSetting);
 			} else {
-				//添加
 				saveOneSiteSetting(siteSetting);
+			}
+		}
+		deleteSiteInfoRedisCache();
+	}
+
+	@Transactional(rollbackFor = Exception.class)
+	@Override
+	public void updateHomeVideoUrl(String videoUrl) {
+		String normalizedVideoUrl = normalizeVideoUrl(videoUrl);
+		SiteSetting current = siteSettingMapper.getSiteSettingByNameEn(SiteSettingConstants.VIDEO_URL);
+		if (current == null) {
+			SiteSetting siteSetting = new SiteSetting();
+			siteSetting.setNameEn(SiteSettingConstants.VIDEO_URL);
+			siteSetting.setNameZh("首页视频");
+			siteSetting.setType(1);
+			siteSetting.setValue(normalizedVideoUrl);
+			saveOneSiteSetting(siteSetting);
+		} else {
+			SiteSetting siteSetting = new SiteSetting();
+			siteSetting.setNameEn(SiteSettingConstants.VIDEO_URL);
+			siteSetting.setValue(normalizedVideoUrl);
+			if (siteSettingMapper.updateSiteSettingValueByNameEn(siteSetting) < 1) {
+				throw new PersistenceException("配置修改失败");
 			}
 		}
 		deleteSiteInfoRedisCache();
@@ -190,9 +172,71 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 		}
 	}
 
-	/**
-	 * 删除站点信息缓存
-	 */
+	private void handleType1SiteSetting(Map<String, Object> siteInfo, SiteSetting siteSetting) {
+		if (SiteSettingConstants.COPYRIGHT.equals(siteSetting.getNameEn())) {
+			Copyright copyright = JacksonUtils.readValue(siteSetting.getValue(), Copyright.class);
+			siteInfo.put(siteSetting.getNameEn(), copyright);
+			return;
+		}
+		if (SiteSettingConstants.VIDEO_URL.equals(siteSetting.getNameEn())) {
+			siteInfo.put(siteSetting.getNameEn(), normalizeVideoUrl(siteSetting.getValue()));
+			return;
+		}
+		siteInfo.put(siteSetting.getNameEn(), siteSetting.getValue());
+	}
+
+	private void handleType2SiteSetting(Introduction introduction, List<Favorite> favorites, List<String> rollTexts, SiteSetting siteSetting) {
+		switch (siteSetting.getNameEn()) {
+			case SiteSettingConstants.AVATAR:
+				introduction.setAvatar(siteSetting.getValue());
+				break;
+			case SiteSettingConstants.NAME:
+				introduction.setName(siteSetting.getValue());
+				break;
+			case SiteSettingConstants.GITHUB:
+				introduction.setGithub(siteSetting.getValue());
+				break;
+			case SiteSettingConstants.TELEGRAM:
+				introduction.setTelegram(siteSetting.getValue());
+				break;
+			case SiteSettingConstants.QQ:
+				introduction.setQq(siteSetting.getValue());
+				break;
+			case SiteSettingConstants.BILIBILI:
+				introduction.setBilibili(siteSetting.getValue());
+				break;
+			case SiteSettingConstants.NETEASE:
+				introduction.setNetease(siteSetting.getValue());
+				break;
+			case SiteSettingConstants.EMAIL:
+				introduction.setEmail(siteSetting.getValue());
+				break;
+			case SiteSettingConstants.FAVORITE:
+				favorites.add(JacksonUtils.readValue(siteSetting.getValue(), Favorite.class));
+				break;
+			case SiteSettingConstants.ROLL_TEXT:
+				Matcher matcher = PATTERN.matcher(siteSetting.getValue());
+				while (matcher.find()) {
+					rollTexts.add(matcher.group(1));
+				}
+				break;
+			default:
+				break;
+		}
+	}
+
+	private String normalizeVideoUrl(String videoUrl) {
+		if (videoUrl == null || videoUrl.trim().isEmpty()) {
+			return "";
+		}
+		String trimmed = videoUrl.trim();
+		int index = trimmed.indexOf("/video/");
+		if (index > -1) {
+			return trimmed.substring(index);
+		}
+		return trimmed;
+	}
+
 	private void deleteSiteInfoRedisCache() {
 		redisService.deleteCacheByKey(RedisKeyConstants.SITE_INFO_MAP);
 	}

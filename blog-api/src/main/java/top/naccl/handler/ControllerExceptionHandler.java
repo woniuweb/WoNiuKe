@@ -6,6 +6,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import top.naccl.exception.BadRequestException;
 import top.naccl.exception.NotFoundException;
 import top.naccl.exception.PersistenceException;
 import top.naccl.model.vo.Result;
@@ -46,6 +47,12 @@ public class ControllerExceptionHandler {
 	public Result persistenceExceptionHandler(HttpServletRequest request, PersistenceException e) {
 		logger.error("Request URL : {}, Exception :", request.getRequestURL(), e);
 		return Result.create(500, e.getMessage());
+	}
+
+	@ExceptionHandler(BadRequestException.class)
+	public Result badRequestExceptionHandler(HttpServletRequest request, BadRequestException e) {
+		logger.error("Request URL : {}, Exception :", request.getRequestURL(), e);
+		return Result.create(400, e.getMessage());
 	}
 
 	/**

@@ -7,6 +7,10 @@
         select * from site_setting
     </select>
 
+    <select id="getSiteSettingByNameEn" resultType="top.naccl.entity.SiteSetting">
+        select * from site_setting where name_en=#{nameEn} limit 1
+    </select>
+
     <!--查询友链页面信息-->
     <select id="getFriendInfo" resultType="top.naccl.entity.SiteSetting">
         select * from site_setting where type=4
@@ -20,6 +24,10 @@
     <!--更新-->
     <update id="updateSiteSetting">
         update site_setting set value=#{value} where id=#{id}
+    </update>
+
+    <update id="updateSiteSettingValueByNameEn">
+        update site_setting set value=#{value} where name_en=#{nameEn}
     </update>
 
     <!--删除-->

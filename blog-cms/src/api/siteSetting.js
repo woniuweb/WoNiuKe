@@ -18,6 +18,23 @@ export function update(settings, deleteIds) {
 	})
 }
 
+export function getHomeVideo() {
+	return axios({
+		url: 'siteSettings/homeVideo',
+		method: 'GET'
+	})
+}
+
+export function updateHomeVideo(videoUrl) {
+	return axios({
+		url: 'siteSettings/homeVideo',
+		method: 'POST',
+		data: {
+			videoUrl
+		}
+	})
+}
+
 export function getWebTitleSuffix() {
 	return axios({
 		url: 'webTitleSuffix',

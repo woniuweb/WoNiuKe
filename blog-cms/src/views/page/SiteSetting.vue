@@ -7,7 +7,11 @@
 						<span>基础设置</span>
 					</div>
 					<el-form label-position="right" label-width="100px">
-						<el-form-item :label="item.nameZh" v-for="item in typeMap.type1" :key="item.id">
+						<el-form-item
+							v-for="item in normalType1Settings"
+							:key="item.id || item.nameEn"
+							:label="item.nameZh"
+						>
 							<el-input v-model="item.value" size="mini"></el-input>
 						</el-form-item>
 					</el-form>
@@ -19,8 +23,8 @@
 						<span>资料卡</span>
 					</div>
 					<el-form label-position="right" label-width="100px">
-						<el-form-item :label="item.nameZh" v-for="item in typeMap.type2" :key="item.id">
-							<div v-if="item.nameEn=='favorite'">
+						<el-form-item v-for="item in typeMap.type2" :key="item.id || item.key" :label="item.nameZh">
+							<div v-if="item.nameEn === 'favorite'">
 								<el-col :span="20">
 									<el-input v-model="item.value" size="mini"></el-input>
 								</el-col>
@@ -40,10 +44,70 @@
 
 		<el-row style="margin-top: 20px">
 			<el-card>
+				<div slot="header" class="video-header">
+					<span>首页视频</span>
+					<el-button size="mini" icon="el-icon-refresh" @click="loadVideoList">刷新列表</el-button>
+				</div>
+
+				<el-form label-position="right" label-width="100px">
+					<el-form-item label="当前视频">
+						<el-input v-model="homeVideoUrl" size="mini" readonly></el-input>
+					</el-form-item>
+				</el-form>
+
+				<el-upload
+					action=""
+					:auto-upload="false"
+					:show-file-list="false"
+					:on-change="handleVideoChange"
+					accept=".mp4,.webm,.ogg,video/mp4,video/webm,video/ogg"
+				>
+					<el-button size="mini" type="primary" icon="el-icon-upload">上传视频</el-button>
+				</el-upload>
+
+				<el-alert
+					class="video-alert"
+					title="推荐将首页背景视频压缩到 20MB 以内。支持较大文件上传，但超过 20MB 的视频更适合桌面端展示。"
+					type="warning"
+					:closable="false"
+					show-icon
+				></el-alert>
+
+				<div class="video-list" v-loading="videoListLoading">
+					<div class="video-card" v-for="item in videoList" :key="item.id">
+						<video class="video-preview" :src="item.url" controls preload="metadata"></video>
+						<div class="video-info">
+							<div class="video-name" :title="item.originalName || item.fileName">{{ item.originalName || item.fileName }}</div>
+							<div class="video-meta">URL：{{ item.url }}</div>
+							<div class="video-meta" :class="{ 'video-meta-warning': isLargeVideo(item.fileSize) }">
+								大小：{{ formatFileSize(item.fileSize) }}
+								<span v-if="isLargeVideo(item.fileSize)">（建议仅桌面端展示）</span>
+							</div>
+							<div class="video-meta">上传时间：{{ formatDate(item.createTime) }}</div>
+						</div>
+						<div class="video-actions">
+							<el-button
+								size="mini"
+								type="primary"
+								:loading="currentVideoLoading === item.url"
+								@click="useVideo(item.url)"
+							>
+								设为首页视频
+							</el-button>
+							<el-button size="mini" @click="copyVideoUrl(item.url)">复制地址</el-button>
+						</div>
+					</div>
+					<el-empty v-if="!videoListLoading && !videoList.length" description="暂无视频"></el-empty>
+				</div>
+			</el-card>
+		</el-row>
+
+		<el-row style="margin-top: 20px">
+			<el-card>
 				<div slot="header">
 					<span>页脚徽标</span>
 				</div>
-				<el-form :inline="true" v-for="badge in typeMap.type3" :key="badge.id">
+				<el-form :inline="true" v-for="badge in typeMap.type3" :key="badge.id || badge.key">
 					<el-form-item label="title">
 						<el-input v-model="badge.value.title" size="mini"></el-input>
 					</el-form-item>
@@ -67,119 +131,260 @@
 			</el-card>
 		</el-row>
 
-		<div style="text-align: right;margin-top: 30px">
-			<el-button type="primary" icon="el-icon-check" @click="submit">保存</el-button>
+		<div style="text-align: right; margin-top: 30px">
+			<el-button type="primary" icon="el-icon-check" @click="submit">保存站点设置</el-button>
 		</div>
 	</div>
 </template>
 
 <script>
-	import Breadcrumb from "@/components/Breadcrumb";
-	import {getSiteSettingData, update} from "@/api/siteSetting";
-	import _ from 'lodash'
+import {getSiteSettingData, getHomeVideo, update, updateHomeVideo} from "@/api/siteSetting";
+import {getVideoList, uploadVideo} from "@/api/upload";
+import _ from 'lodash'
 
-	export default {
-		name: "SiteSetting",
-		components: {Breadcrumb},
-		data() {
-			return {
-				deleteIds: [],
-				typeMap: {},
+export default {
+	name: "SiteSetting",
+	data() {
+		return {
+			deleteIds: [],
+			typeMap: {
+				type1: [],
+				type2: [],
+				type3: [],
+			},
+			homeVideoUrl: '',
+			videoList: [],
+			videoListLoading: false,
+			currentVideoLoading: '',
+		}
+	},
+	computed: {
+		normalType1Settings() {
+			return this.typeMap.type1.filter(item => item.nameEn !== 'videoUrl')
+		}
+	},
+	created() {
+		this.getData()
+		this.loadHomeVideo()
+		this.loadVideoList()
+	},
+	methods: {
+		getData() {
+			getSiteSettingData().then(res => {
+				const typeMap = res.data || {type1: [], type2: [], type3: []}
+				typeMap.type1 = (typeMap.type1 || []).filter(item => item.nameEn !== 'videoUrl')
+				typeMap.type2 = typeMap.type2 || []
+				typeMap.type3 = typeMap.type3 || []
+				typeMap.type3.forEach(item => {
+					item.value = JSON.parse(item.value)
+				})
+				this.typeMap = typeMap
+			})
+		},
+		loadHomeVideo() {
+			getHomeVideo().then(res => {
+				this.homeVideoUrl = res.data || ''
+			})
+		},
+		loadVideoList() {
+			this.videoListLoading = true
+			getVideoList().then(res => {
+				this.videoList = res.data || []
+			}).finally(() => {
+				this.videoListLoading = false
+			})
+		},
+		handleVideoChange(file) {
+			const rawFile = file.raw
+			if (!rawFile) {
+				return
 			}
+			uploadVideo(rawFile).then(res => {
+				this.msgSuccess(res.msg)
+				this.homeVideoUrl = res.data.url
+				this.loadVideoList()
+			})
 		},
-		created() {
-			this.getData()
+		useVideo(url) {
+			this.currentVideoLoading = url
+			updateHomeVideo(url).then(res => {
+				this.homeVideoUrl = res.data || url
+				this.msgSuccess('首页视频已更新')
+			}).finally(() => {
+				this.currentVideoLoading = ''
+			})
 		},
-		methods: {
-			getData() {
-				getSiteSettingData().then(res => {
-					this.typeMap = res.data
-					res.data.type3.forEach(item => {
-						item.value = JSON.parse(item.value)
-					})
-				})
-			},
-			addFavorite() {
-				this.typeMap.type2.push({
-					key: Date.now(),
-					nameEn: "favorite",
-					nameZh: "自定义",
-					type: 2,
-					value: "{\"title\":\"\",\"content\":\"\"}"
-				})
-			},
-			addBadge() {
-				this.typeMap.type3.push({
-					key: Date.now(),
-					nameEn: "badge",
-					nameZh: "徽标",
-					type: 3,
-					value: {
-						color: "",
-						subject: "",
-						title: "",
-						url: "",
-						value: ""
+		copyVideoUrl(url) {
+			const input = document.createElement('input')
+			input.value = url
+			document.body.appendChild(input)
+			input.select()
+			document.execCommand('copy')
+			document.body.removeChild(input)
+			this.msgSuccess('复制成功')
+		},
+		addFavorite() {
+			this.typeMap.type2.push({
+				key: Date.now(),
+				nameEn: "favorite",
+				nameZh: "自定义",
+				type: 2,
+				value: "{\"title\":\"\",\"content\":\"\"}"
+			})
+		},
+		addBadge() {
+			this.typeMap.type3.push({
+				key: Date.now(),
+				nameEn: "badge",
+				nameZh: "徽标",
+				type: 3,
+				value: {
+					color: "",
+					subject: "",
+					title: "",
+					url: "",
+					value: ""
+				}
+			})
+		},
+		deleteFavorite(favorite) {
+			let arr = this.typeMap.type2
+			if (favorite.id) {
+				this.deleteIds.push(favorite.id)
+				arr.forEach((item, index) => {
+					if (item.id === favorite.id) {
+						arr.splice(index, 1)
 					}
 				})
-			},
-			deleteFavorite(favorite) {
-				let arr = this.typeMap.type2
-				if (favorite.id) {
-					this.deleteIds.push(favorite.id)
-					arr.forEach((item, index) => {
-						if (item.id === favorite.id) {
-							arr.splice(index, 1)
-							return
-						}
-					})
-				} else {
-					arr.forEach((item, index) => {
-						if (item.key === favorite.key) {
-							arr.splice(index, 1)
-							return
-						}
-					})
-				}
-			},
-			deleteBadge(badge) {
-				let arr = this.typeMap.type3
-				if (badge.id) {
-					this.deleteIds.push(badge.id)
-					arr.forEach((item, index) => {
-						if (item.id === badge.id) {
-							arr.splice(index, 1)
-							return
-						}
-					})
-				} else {
-					arr.forEach((item, index) => {
-						if (item.key === badge.key) {
-							arr.splice(index, 1)
-							return
-						}
-					})
-				}
-			},
-			submit() {
-				const result = _.cloneDeep(this.typeMap)
-				result.type3.forEach(item => {
-					item.value = JSON.stringify(item.value)
-				})
-				let updateArr = []
-				updateArr.push(...result.type1)
-				updateArr.push(...result.type2)
-				updateArr.push(...result.type3)
-				update(updateArr, this.deleteIds).then(res => {
-					this.deleteIds = []
-					this.getData()
-					this.msgSuccess(res.msg)
+			} else {
+				arr.forEach((item, index) => {
+					if (item.key === favorite.key) {
+						arr.splice(index, 1)
+					}
 				})
 			}
+		},
+		deleteBadge(badge) {
+			let arr = this.typeMap.type3
+			if (badge.id) {
+				this.deleteIds.push(badge.id)
+				arr.forEach((item, index) => {
+					if (item.id === badge.id) {
+						arr.splice(index, 1)
+					}
+				})
+			} else {
+				arr.forEach((item, index) => {
+					if (item.key === badge.key) {
+						arr.splice(index, 1)
+					}
+				})
+			}
+		},
+		submit() {
+			const result = _.cloneDeep(this.typeMap)
+			result.type3.forEach(item => {
+				item.value = JSON.stringify(item.value)
+			})
+			let updateArr = []
+			updateArr.push(...result.type1)
+			updateArr.push(...result.type2)
+			updateArr.push(...result.type3)
+			update(updateArr, this.deleteIds).then(res => {
+				this.deleteIds = []
+				this.getData()
+				this.msgSuccess(res.msg)
+			})
+		},
+		formatFileSize(size) {
+			if (!size && size !== 0) {
+				return '-'
+			}
+			if (size < 1024) {
+				return size + ' B'
+			}
+			if (size < 1024 * 1024) {
+				return (size / 1024).toFixed(2) + ' KB'
+			}
+			if (size < 1024 * 1024 * 1024) {
+				return (size / 1024 / 1024).toFixed(2) + ' MB'
+			}
+			return (size / 1024 / 1024 / 1024).toFixed(2) + ' GB'
+		},
+		formatDate(value) {
+			if (!value) {
+				return '-'
+			}
+			return new Date(value).toLocaleString()
+		},
+		isLargeVideo(size) {
+			return size > 20 * 1024 * 1024
 		}
 	}
+}
 </script>
 
 <style scoped>
+.video-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
 
+.video-alert {
+	margin-top: 12px;
+}
+
+.video-list {
+	margin-top: 20px;
+}
+
+.video-card {
+	display: flex;
+	align-items: center;
+	padding: 16px;
+	border: 1px solid #ebeef5;
+	border-radius: 4px;
+}
+
+.video-card + .video-card {
+	margin-top: 12px;
+}
+
+.video-preview {
+	width: 240px;
+	height: 135px;
+	background: #000;
+	border-radius: 4px;
+	flex-shrink: 0;
+}
+
+.video-info {
+	flex: 1;
+	margin: 0 16px;
+	overflow: hidden;
+}
+
+.video-name {
+	font-weight: 600;
+	margin-bottom: 8px;
+}
+
+.video-meta {
+	color: #606266;
+	font-size: 13px;
+	line-height: 1.8;
+	word-break: break-all;
+}
+
+.video-meta-warning {
+	color: #e6a23c;
+	font-weight: 600;
+}
+
+.video-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
 </style>
