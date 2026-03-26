@@ -11,4 +11,6 @@ public interface UploadFileService {
 	UploadFileVO uploadVideo(MultipartFile file) throws Exception;
 
 	List<UploadFileVO> getVideoList();
+
+	void deleteVideo(Long id);
 }

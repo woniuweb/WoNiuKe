@@ -22,5 +22,6 @@ public class UploadFileVO {
 	private Long fileSize;
 	private String storageMode;
 	private String filePath;
+	private String posterUrl;
 	private Date createTime;
 }

@@ -2,6 +2,7 @@ package top.naccl.controller.admin;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,11 +31,22 @@ public class UploadAdminController {
 	@PostMapping(value = "/upload/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public Result uploadVideo(@RequestParam("file") MultipartFile file) throws Exception {
 		UploadFileVO vo = uploadFileService.uploadVideo(file);
-		return Result.ok("上传成功", vo);
+		String message = isEmpty(vo.getPosterUrl()) ? "视频上传成功，但未生成首帧封面，请检查 ffmpeg 配置" : "上传成功";
+		return Result.ok(message, vo);
 	}
 
 	@GetMapping("/upload/videos")
 	public Result getVideoList() {
 		return Result.ok("请求成功", uploadFileService.getVideoList());
+	}
+
+	@DeleteMapping("/upload/video")
+	public Result deleteVideo(@RequestParam("id") Long id) {
+		uploadFileService.deleteVideo(id);
+		return Result.ok("删除成功");
+	}
+
+	private boolean isEmpty(String value) {
+		return value == null || value.trim().isEmpty();
 	}
 }

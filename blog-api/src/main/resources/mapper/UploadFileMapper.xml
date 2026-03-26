@@ -39,4 +39,9 @@
 		order by create_time desc
 	</select>
 
+	<delete id="deleteById">
+		delete from upload_file
+		where id = #{id}
+	</delete>
+
 </mapper>

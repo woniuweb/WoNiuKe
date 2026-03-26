@@ -20,7 +20,7 @@
 			<el-col :span="12">
 				<el-card>
 					<div slot="header">
-						<span>资料卡</span>
+						<span>资料卡片</span>
 					</div>
 					<el-form label-position="right" label-width="100px">
 						<el-form-item v-for="item in typeMap.type2" :key="item.id || item.key" :label="item.nameZh">
@@ -67,7 +67,7 @@
 
 				<el-alert
 					class="video-alert"
-					title="推荐将首页背景视频压缩到 20MB 以内。支持较大文件上传，但超过 20MB 的视频更适合桌面端展示。"
+					title="推荐首页背景视频压缩到 20MB 以内。当前支持较大文件上传，但超大视频只建议桌面端展示。"
 					type="warning"
 					:closable="false"
 					show-icon
@@ -75,12 +75,23 @@
 
 				<div class="video-list" v-loading="videoListLoading">
 					<div class="video-card" v-for="item in videoList" :key="item.id">
-						<video class="video-preview" :src="item.url" controls preload="metadata"></video>
+						<div class="video-preview-wrap">
+							<img
+								v-if="item.posterUrl"
+								class="video-poster"
+								:src="item.posterUrl"
+								:alt="item.originalName || item.fileName"
+							>
+							<div v-else class="video-preview-placeholder">
+								<span>暂无封面</span>
+							</div>
+						</div>
 						<div class="video-info">
 							<div class="video-name" :title="item.originalName || item.fileName">{{ item.originalName || item.fileName }}</div>
-							<div class="video-meta">URL：{{ item.url }}</div>
+							<div class="video-meta">视频地址：{{ item.url }}</div>
+							<div class="video-meta" v-if="item.posterUrl">封面地址：{{ item.posterUrl }}</div>
 							<div class="video-meta" :class="{ 'video-meta-warning': isLargeVideo(item.fileSize) }">
-								大小：{{ formatFileSize(item.fileSize) }}
+								文件大小：{{ formatFileSize(item.fileSize) }}
 								<span v-if="isLargeVideo(item.fileSize)">（建议仅桌面端展示）</span>
 							</div>
 							<div class="video-meta">上传时间：{{ formatDate(item.createTime) }}</div>
@@ -94,7 +105,16 @@
 							>
 								设为首页视频
 							</el-button>
-							<el-button size="mini" @click="copyVideoUrl(item.url)">复制地址</el-button>
+							<el-button size="mini" @click="copyText(item.url)">复制视频地址</el-button>
+							<el-button v-if="item.posterUrl" size="mini" @click="copyText(item.posterUrl)">复制封面地址</el-button>
+							<el-button
+								size="mini"
+								type="danger"
+								:loading="deleteVideoLoading === item.id"
+								@click="handleDeleteVideo(item)"
+							>
+								删除
+							</el-button>
 						</div>
 					</div>
 					<el-empty v-if="!videoListLoading && !videoList.length" description="暂无视频"></el-empty>
@@ -139,8 +159,10 @@
 
 <script>
 import {getSiteSettingData, getHomeVideo, update, updateHomeVideo} from "@/api/siteSetting";
-import {getVideoList, uploadVideo} from "@/api/upload";
+import {deleteVideo, getVideoList, uploadVideo} from "@/api/upload";
 import _ from 'lodash'
+
+const VIDEO_SETTING_KEYS = ['videoUrl', 'videoPoster']
 
 export default {
 	name: "SiteSetting",
@@ -156,11 +178,12 @@ export default {
 			videoList: [],
 			videoListLoading: false,
 			currentVideoLoading: '',
+			deleteVideoLoading: '',
 		}
 	},
 	computed: {
 		normalType1Settings() {
-			return this.typeMap.type1.filter(item => item.nameEn !== 'videoUrl')
+			return this.typeMap.type1.filter(item => !VIDEO_SETTING_KEYS.includes(item.nameEn))
 		}
 	},
 	created() {
@@ -172,7 +195,7 @@ export default {
 		getData() {
 			getSiteSettingData().then(res => {
 				const typeMap = res.data || {type1: [], type2: [], type3: []}
-				typeMap.type1 = (typeMap.type1 || []).filter(item => item.nameEn !== 'videoUrl')
+				typeMap.type1 = (typeMap.type1 || []).filter(item => !VIDEO_SETTING_KEYS.includes(item.nameEn))
 				typeMap.type2 = typeMap.type2 || []
 				typeMap.type3 = typeMap.type3 || []
 				typeMap.type3.forEach(item => {
@@ -214,9 +237,24 @@ export default {
 				this.currentVideoLoading = ''
 			})
 		},
-		copyVideoUrl(url) {
+		handleDeleteVideo(item) {
+			this.$confirm('删除后将同时移除视频文件和首帧封面，是否继续？', '删除视频', {
+				confirmButtonText: '确定删除',
+				cancelButtonText: '取消',
+				type: 'warning'
+			}).then(() => {
+				this.deleteVideoLoading = item.id
+				return deleteVideo(item.id)
+			}).then(res => {
+				this.msgSuccess(res.msg)
+				this.loadVideoList()
+			}).finally(() => {
+				this.deleteVideoLoading = ''
+			})
+		},
+		copyText(text) {
 			const input = document.createElement('input')
-			input.value = url
+			input.value = text
 			document.body.appendChild(input)
 			input.select()
 			document.execCommand('copy')
@@ -351,12 +389,35 @@ export default {
 	margin-top: 12px;
 }
 
-.video-preview {
+.video-preview-wrap {
 	width: 240px;
 	height: 135px;
-	background: #000;
 	border-radius: 4px;
+	overflow: hidden;
 	flex-shrink: 0;
+	background: #000;
+}
+
+.video-poster,
+.video-preview-placeholder {
+	width: 100%;
+	height: 100%;
+	display: block;
+	background: #000;
+}
+
+.video-poster {
+	object-fit: cover;
+}
+
+.video-preview-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: rgba(255, 255, 255, 0.7);
+	font-size: 14px;
+	letter-spacing: 1px;
+	background: linear-gradient(135deg, #3b4256 0%, #202636 100%);
 }
 
 .video-info {

@@ -43,6 +43,10 @@ module.exports = {
 				pathRewrite: {
 					'^/api': ''
 				}
+			},
+			'/video': {
+				target: 'http://localhost:8090',
+				changeOrigin: true
 			}
 		}
 	},

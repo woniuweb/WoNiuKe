@@ -35,3 +35,13 @@ export function getVideoList() {
 		method: 'GET'
 	})
 }
+
+export function deleteVideo(id) {
+	return axios({
+		url: 'upload/video',
+		method: 'DELETE',
+		params: {
+			id
+		}
+	})
+}

@@ -1,6 +1,13 @@
 <template>
 	<header ref="header">
 		<div class="view">
+			<div class="loading-background"></div>
+			<img
+				v-if="showPoster"
+				class="poster-background"
+				:src="posterSource"
+				alt="video poster"
+			>
 			<video
 				v-if="videoSource && !videoFailed"
 				ref="videoBackground"
@@ -11,13 +18,10 @@
 				loop
 				muted
 				playsinline
-				@loadeddata="onVideoLoaded"
+				@canplay="onVideoReady"
 				@error="onVideoError"
-				:style="{ opacity: videoLoaded ? 1 : 0 }"
+				:style="{ opacity: videoReady ? 1 : 0 }"
 			></video>
-			<div class="loading-background">
-				<div class="loading-spinner" v-if="videoSource && !videoLoaded && !videoFailed"></div>
-			</div>
 			<div class="overlay-light"></div>
 		</div>
 
@@ -55,7 +59,7 @@ export default {
 	name: "Header",
 	data() {
 		return {
-			videoLoaded: false,
+			videoReady: false,
 			videoFailed: false,
 			defaultSettings,
 			displayedText: '',
@@ -73,6 +77,15 @@ export default {
 				return ''
 			}
 			return this.siteInfo.videoUrl || this.defaultSettings.videoUrl || ''
+		},
+		posterSource() {
+			if (!this.siteInfo || typeof this.siteInfo !== 'object' || !Object.keys(this.siteInfo).length) {
+				return ''
+			}
+			return this.siteInfo.videoPoster || ''
+		},
+		showPoster() {
+			return !!this.posterSource && (!this.videoReady || this.videoFailed)
 		}
 	},
 	watch: {
@@ -81,8 +94,10 @@ export default {
 			this.initParticles()
 		},
 		videoSource() {
-			this.videoLoaded = false
-			this.videoFailed = false
+			this.resetVideoState()
+		},
+		posterSource() {
+			this.resetVideoState()
 		}
 	},
 	mounted() {
@@ -99,6 +114,10 @@ export default {
 		window.removeEventListener('scroll', this.handleScroll)
 	},
 	methods: {
+		resetVideoState() {
+			this.videoReady = false
+			this.videoFailed = false
+		},
 		setHeaderHeight() {
 			this.$refs.header.style.height = this.clientSize.clientHeight + 'px'
 		},
@@ -184,11 +203,12 @@ export default {
 			}
 			window.addEventListener('scroll', this.handleScroll)
 		},
-		onVideoLoaded() {
-			this.videoLoaded = true
+		onVideoReady() {
+			this.videoReady = true
+			this.videoFailed = false
 		},
 		onVideoError() {
-			this.videoLoaded = false
+			this.videoReady = false
 			this.videoFailed = true
 		}
 	}
@@ -214,6 +234,17 @@ header {
 	transition: .2s all ease-in;
 }
 
+.loading-background {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(135deg, #667eea 0%, #4b67a2 100%);
+	z-index: 5;
+}
+
+.poster-background,
 .video-background {
 	position: absolute;
 	top: 50%;
@@ -223,36 +254,16 @@ header {
 	width: auto;
 	height: auto;
 	transform: translate(-50%, -50%);
-	z-index: 10;
 	object-fit: cover;
+}
+
+.poster-background {
+	z-index: 10;
+}
+
+.video-background {
+	z-index: 15;
 	transition: opacity 0.5s ease-in;
-}
-
-.loading-background {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background: linear-gradient(135deg, #667eea 0%, #4b67a2 100%);
-	z-index: 5;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.loading-spinner {
-	width: 50px;
-	height: 50px;
-	border: 4px solid rgba(255, 255, 255, 0.3);
-	border-top-color: #fff;
-	border-radius: 50%;
-	animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-	0% { transform: rotate(0deg); }
-	100% { transform: rotate(360deg); }
 }
 
 .overlay-light {
@@ -261,7 +272,7 @@ header {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.2) 100%);
+	background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.2) 100%);
 	z-index: 20;
 }
 

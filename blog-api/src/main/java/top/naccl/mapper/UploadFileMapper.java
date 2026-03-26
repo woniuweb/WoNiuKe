@@ -14,4 +14,6 @@ public interface UploadFileMapper {
 	UploadFile getById(Long id);
 
 	List<UploadFile> getListByFileTypes(List<String> fileTypes);
+
+	int deleteById(Long id);
 }

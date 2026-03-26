@@ -1,6 +1,7 @@
 package top.naccl.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import top.naccl.constant.RedisKeyConstants;
@@ -16,6 +17,9 @@ import top.naccl.service.RedisService;
 import top.naccl.service.SiteSettingService;
 import top.naccl.util.JacksonUtils;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -33,6 +37,9 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 
 	@Autowired
 	private RedisService redisService;
+
+	@Value("${upload.file.path}")
+	private String uploadFilePath;
 
 	@Override
 	public Map<String, List<SiteSetting>> getList() {
@@ -111,7 +118,7 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 	@Override
 	public String getHomeVideoUrl() {
 		SiteSetting siteSetting = siteSettingMapper.getSiteSettingByNameEn(SiteSettingConstants.VIDEO_URL);
-		return siteSetting == null ? "" : normalizeVideoUrl(siteSetting.getValue());
+		return siteSetting == null ? "" : normalizeMediaUrl(siteSetting.getValue());
 	}
 
 	@Transactional(rollbackFor = Exception.class)
@@ -134,23 +141,10 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 	@Transactional(rollbackFor = Exception.class)
 	@Override
 	public void updateHomeVideoUrl(String videoUrl) {
-		String normalizedVideoUrl = normalizeVideoUrl(videoUrl);
-		SiteSetting current = siteSettingMapper.getSiteSettingByNameEn(SiteSettingConstants.VIDEO_URL);
-		if (current == null) {
-			SiteSetting siteSetting = new SiteSetting();
-			siteSetting.setNameEn(SiteSettingConstants.VIDEO_URL);
-			siteSetting.setNameZh("首页视频");
-			siteSetting.setType(1);
-			siteSetting.setValue(normalizedVideoUrl);
-			saveOneSiteSetting(siteSetting);
-		} else {
-			SiteSetting siteSetting = new SiteSetting();
-			siteSetting.setNameEn(SiteSettingConstants.VIDEO_URL);
-			siteSetting.setValue(normalizedVideoUrl);
-			if (siteSettingMapper.updateSiteSettingValueByNameEn(siteSetting) < 1) {
-				throw new PersistenceException("配置修改失败");
-			}
-		}
+		String normalizedVideoUrl = normalizeMediaUrl(videoUrl);
+		String posterUrl = resolvePosterUrl(normalizedVideoUrl);
+		saveOrUpdateSingleType1Setting(SiteSettingConstants.VIDEO_URL, "首页视频", normalizedVideoUrl);
+		saveOrUpdateSingleType1Setting(SiteSettingConstants.VIDEO_POSTER, "首页视频封面", posterUrl);
 		deleteSiteInfoRedisCache();
 	}
 
@@ -179,7 +173,11 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 			return;
 		}
 		if (SiteSettingConstants.VIDEO_URL.equals(siteSetting.getNameEn())) {
-			siteInfo.put(siteSetting.getNameEn(), normalizeVideoUrl(siteSetting.getValue()));
+			siteInfo.put(siteSetting.getNameEn(), normalizeMediaUrl(siteSetting.getValue()));
+			return;
+		}
+		if (SiteSettingConstants.VIDEO_POSTER.equals(siteSetting.getNameEn())) {
+			siteInfo.put(siteSetting.getNameEn(), resolvePosterUrl(siteSetting.getValue()));
 			return;
 		}
 		siteInfo.put(siteSetting.getNameEn(), siteSetting.getValue());
@@ -225,16 +223,79 @@ public class SiteSettingServiceImpl implements SiteSettingService {
 		}
 	}
 
-	private String normalizeVideoUrl(String videoUrl) {
-		if (videoUrl == null || videoUrl.trim().isEmpty()) {
+	private void saveOrUpdateSingleType1Setting(String nameEn, String nameZh, String value) {
+		SiteSetting current = siteSettingMapper.getSiteSettingByNameEn(nameEn);
+		if (current == null) {
+			SiteSetting siteSetting = new SiteSetting();
+			siteSetting.setNameEn(nameEn);
+			siteSetting.setNameZh(nameZh);
+			siteSetting.setType(1);
+			siteSetting.setValue(value);
+			saveOneSiteSetting(siteSetting);
+			return;
+		}
+		SiteSetting siteSetting = new SiteSetting();
+		siteSetting.setNameEn(nameEn);
+		siteSetting.setValue(value);
+		if (siteSettingMapper.updateSiteSettingValueByNameEn(siteSetting) < 1) {
+			throw new PersistenceException("配置修改失败");
+		}
+	}
+
+	private String normalizeMediaUrl(String url) {
+		if (url == null || url.trim().isEmpty()) {
 			return "";
 		}
-		String trimmed = videoUrl.trim();
+		String trimmed = url.trim();
 		int index = trimmed.indexOf("/video/");
 		if (index > -1) {
 			return trimmed.substring(index);
 		}
 		return trimmed;
+	}
+
+	private String resolvePosterUrl(String candidate) {
+		String normalized = normalizeMediaUrl(candidate);
+		if (normalized.isEmpty()) {
+			return "";
+		}
+		if (!normalized.startsWith("/video/poster/")) {
+			if (!normalized.startsWith("/video/")) {
+				return "";
+			}
+			normalized = derivePosterUrl(normalized);
+		}
+		Path posterFile = resolvePosterPath(normalized);
+		if (posterFile == null || Files.notExists(posterFile)) {
+			return "";
+		}
+		return normalized;
+	}
+
+	private String derivePosterUrl(String videoUrl) {
+		if (videoUrl == null || videoUrl.trim().isEmpty()) {
+			return "";
+		}
+		String normalized = normalizeMediaUrl(videoUrl);
+		if (!normalized.startsWith("/video/")) {
+			return "";
+		}
+		String fileName = normalized.substring("/video/".length());
+		int idx = fileName.lastIndexOf('.');
+		String baseName = idx > -1 ? fileName.substring(0, idx) : fileName;
+		return "/video/poster/" + baseName + ".jpg";
+	}
+
+	private Path resolvePosterPath(String posterUrl) {
+		if (posterUrl == null || posterUrl.trim().isEmpty()) {
+			return null;
+		}
+		String relativePath = posterUrl.startsWith("/") ? posterUrl.substring(1) : posterUrl;
+		String normalized = uploadFilePath;
+		if (!normalized.endsWith("/") && !normalized.endsWith("\\")) {
+			normalized += File.separator;
+		}
+		return new File(normalized + relativePath).toPath().toAbsolutePath().normalize();
 	}
 
 	private void deleteSiteInfoRedisCache() {
